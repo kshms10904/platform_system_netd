@@ -1,0 +1,121 @@
+cc_library_headers {
+    name: "libnetd_resolv_headers",
+    export_include_dirs: ["include"],
+}
+
+cc_library {
+    name: "libnetd_resolv",
+    version_script: "libnetd_resolv.map.txt",
+    defaults: ["netd_defaults"],
+    srcs: [
+        "getaddrinfo.cpp",
+        "gethnamaddr.cpp",
+        "sethostent.cpp",
+        "res_cache.cpp",
+        "res_comp.cpp",
+        "res_debug.cpp",
+        "res_init.cpp",
+        "res_mkquery.cpp",
+        "res_query.cpp",
+        "res_send.cpp",
+        "res_state.cpp",
+        "res_stats.cpp",
+        "DnsProxyListener.cpp",
+        "DnsTlsDispatcher.cpp",
+        "DnsTlsQueryMap.cpp",
+        "DnsTlsTransport.cpp",
+        "DnsTlsServer.cpp",
+        "DnsTlsSessionCache.cpp",
+        "DnsTlsSocket.cpp",
+        "PrivateDnsConfiguration.cpp",
+        "ResolverEventReporter.cpp",
+    ],
+    // Link everything statically (except for libc) to minimize our dependence
+    // on system ABIs
+    stl: "libc++_static",
+    static_libs: [
+        "libbase",
+        "libcrypto",
+        "libcutils",
+        "liblog",
+        "libnetdutils",
+        "libssl",
+        "libsysutils",
+        "netd_event_listener_interface-ndk_platform",
+    ],
+    shared_libs: [
+        "libbinder_ndk",
+        "libstatslog",
+    ],
+    // TODO: Get rid of these include paths used in DnsProxyListener.
+    include_dirs: [
+        "system/netd/include",
+        "system/netd/server",
+    ],
+    export_include_dirs: ["include"],
+    // TODO: pie in the sky: make this code clang-tidy clean
+    tidy: false,
+    product_variables: {
+        debuggable: {
+            cppflags: [
+                "-DRESOLV_ALLOW_VERBOSE_LOGGING=1",
+            ],
+        },
+    },
+}
+
+cc_test {
+    name: "resolv_integration_test",
+    test_suites: ["device-tests"],
+    defaults: ["netd_defaults"],
+    srcs: [
+        "dns_responder/dns_responder.cpp",
+        "resolver_test.cpp",
+    ],
+    include_dirs: [
+        "system/netd/resolv/include",
+        "system/netd/server",
+    ],
+    shared_libs: [
+        "libbase",
+        "libbinder",
+        "libcrypto",
+        "liblog",
+        "libnetd_client",
+        "libssl",
+        "libutils",
+    ],
+    static_libs: [
+        "libnetd_test_dnsresponder",
+        "libnetd_test_tun_interface",
+        "liblogwrap",
+        "libnetdutils",
+        "netd_aidl_interface-cpp",
+        "netd_event_listener_interface-cpp",
+    ],
+    compile_multilib: "both",
+    sanitize: {
+        address: true,
+        recover: [ "all" ],
+    },
+}
+
+cc_test {
+    name: "resolv_unit_test",
+    defaults: ["netd_defaults"],
+    srcs: [
+        "dns_tls_test.cpp",
+        "libnetd_resolv_test.cpp",
+    ],
+    shared_libs: [
+        "libbase",
+        "libcrypto",
+        "liblog",
+        "libssl",
+    ],
+    static_libs: [
+        "libnetd_resolv",
+        "libnetd_test_dnsresponder",
+        "libnetdutils",
+    ],
+}
